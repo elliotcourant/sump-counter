@@ -1,0 +1,24 @@
+[Unit]
+Description=GPIO Socket Service
+ConditionPathExists=/home/ubuntu/bin/gpio_socket
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+LimitNOFILE=1024
+Restart=on-failure
+RestartSec=10
+WorkingDirectory=/home/ubuntu
+ExecStart=/home/ubuntu/bin/gpio_socket --socket=/tmp/gpio
+ExecStartPre=/bin/chown -R ubuntu /dev/gpiomem
+ExecStartPre=/bin/mkdir -p /tmp/gpio
+ExecStartPre=/bin/chown ubuntu /tmp/gpio
+ExecStartPre=/bin/chmod 777 /tmp/gpio
+PermissionsStartOnly=true
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=gpio_socket
+[Install]
+WantedBy=multi-user.target

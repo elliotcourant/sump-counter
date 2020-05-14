@@ -1,0 +1,156 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: microk8s-storage
+provisioner: microk8s.io/hostpath
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sump-boi-postgres-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: microk8s-storage
+  resources:
+    requests:
+      storage: 5G
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql
+spec:
+  selector:
+    app: postgresql
+  ports:
+    - name: pg
+      protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: NodePort
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-config
+data:
+  POSTGRES_USER: sumpboi
+  POSTGRES_DB: sumpdata
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresql
+spec:
+  selector:
+    matchLabels:
+      app: postgresql
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      terminationGracePeriodSeconds: 90
+      containers:
+        - name: postgresql
+          image: postgres:12
+          imagePullPolicy: Always
+          volumeMounts:
+            - mountPath: /data
+              name: sump-boi-postgres-storage
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: postgresql-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: postgresql-config
+                  key: POSTGRES_DB
+            - name: PGDATA
+              value: /data
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-password
+      volumes:
+        - name: sump-boi-postgres-storage
+          persistentVolumeClaim:
+            claimName: sump-boi-postgres-storage
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sump-boi
+spec:
+  selector:
+    matchLabels:
+      app: sump-boi
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: sump-boi
+    spec:
+      terminationGracePeriodSeconds: 90
+      containers:
+        - name: sump-boi
+          image: localhost:32000/sump-boi:latest
+          imagePullPolicy: Always
+          volumeMounts:
+            - mountPath: /tmp/gpio
+              name: gpio
+            - mountPath: /tmp/google-application-credentials
+              name: google-application-credentials
+              readOnly: true
+            - mountPath: /config
+              name: config
+          env:
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /tmp/google-application-credentials/service-account.json
+            - name: GPIO_SOCKET_PATH
+              value: /tmp/gpio/gpio.sock
+            - name: CONFIG_PATH
+              value: /config/config.yaml
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: postgresql-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: postgresql-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-credentials
+                  key: postgres-password
+      volumes:
+        - name: gpio
+          hostPath:
+            path: /tmp/gpio
+        - name: google-application-credentials
+          secret:
+            secretName: google-application-credentials
+        - name: config
+          configMap:
+            name: sump-boi-config

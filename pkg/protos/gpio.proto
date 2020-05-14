@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package ioserver;
+
+service GPIOService {
+    rpc WatchPinState (Pin) returns (stream PinState);
+    rpc UpdatePinState (UpdatePinStateRequest) returns (PinState);
+    rpc GetPinState (Pin) returns (PinState);
+}
+
+message Pin {
+    int32 Pin = 1;
+}
+
+enum State {
+    Low = 0;
+    High = 1;
+}
+
+message PinState {
+    State State = 1;
+}
+
+message UpdatePinStateRequest {
+    Pin Pin = 1;
+    State State = 2;
+}
