@@ -8,8 +8,8 @@ build:
 	GOOS=linux GOARCH=arm GOARM=7 go build -o ./bin/sump-boi github.com/elliotcourant/sump-counter/pkg/cmd/sump-boi
 
 docker: build
-	docker build --platform linux/arm64 -t 192.168.0.93:32000/sump-boi:latest .
-	docker push 192.168.0.93:32000/sump-boi:latest
+	docker build --platform linux/arm64 -t 192.168.0.95:32000/sump-boi:latest .
+	docker push 192.168.0.95:32000/sump-boi:latest
 
 undeploy:
 	kubectl delete -f k8s.yaml --ignore-not-found=true

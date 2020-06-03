@@ -5,6 +5,7 @@ import (
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/elliotcourant/sump-counter/pkg/ioserver"
 	"github.com/elliotcourant/sump-counter/pkg/models"
+	"github.com/elliotcourant/sump-counter/pkg/pio"
 	"github.com/elliotcourant/sump-counter/pkg/sheets"
 	"github.com/elliotcourant/sump-counter/pkg/storage"
 	"github.com/elliotcourant/sump-counter/pkg/tracing"
@@ -223,6 +224,14 @@ func (s *Service) monitorPump(pump *pumpManagement) {
 	if err != nil {
 		log.WithError(err).Errorf("failed to retrieve previous state of pump")
 	}
+
+	// When the monitoring of a pump initially starts, we want to treat an unknown state as low. Otherwise we could
+	// accidentally observe a state change from Unknown -> Low and treat that as the start of a cycle. This cycle would
+	// continue until another state change was observed.
+	if lastState == pio.Unknown {
+		lastState = pio.Low
+	}
+
 	timeStamp := time.Now()
 
 	for {
