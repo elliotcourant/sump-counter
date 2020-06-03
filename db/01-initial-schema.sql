@@ -1,7 +1,7 @@
 CREATE TABLE pumps (
     pump_id BIGSERIAL PRIMARY KEY,
     name    TEXT     NOT NULL,
-    pump     SMALLINT NOT NULL
+    pump    SMALLINT NOT NULL
 );
 
 CREATE TABLE cycles (
